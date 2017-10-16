@@ -54,6 +54,9 @@ function start(ws) {
                     })
                 } else if ('ping' === data)
                     socket.send('pong');
+                else {
+                    console.log(data);
+                }
                 /*
                 var queryParam = JSON.parse(data);
                 switch (queryParam["method"]) {
