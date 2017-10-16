@@ -1,0 +1,23 @@
+服务器环境搭建 计算机能行 centos 6.8版本及其以上（更好的兼容nodejs运行环境）
+    一、nodejs 环境
+        1 nodejs 安装（安装方式多种，这里直接采用编译好的运行文件配置环境变量）
+             (1) wget https://npm.taobao.org/mirrors/node/v8.1.2/node-v8.1.2-linux-x64.tar.xz
+             (2) 将(1)获取的压缩包解压，将解压出来的目录文件名改为 node
+             (3) 将下面三条语句加入到 /etc/profile末尾(注意：第二条的文件路径对应你文件解压的路径)，保存退出并运行命令 source /etc/profile
+                  #nodejs 环境变量
+                  export NODEJS_HOME=/usr/local/node
+                  export PATH=$PATH:$NODEJS_HOME/bin
+             (4) 测试配置结果，node --version 出现版本信息则配置正确
+        2 通过配置好的 nodejs 安装 pm2（nodejs程序守护进程）
+            (1) npm install pm2 -g (等待安装完成即可)
+
+    二、svn 环境
+        1. svn 安装
+            (1) yum install svn
+        2. svn 克隆服务器代码
+            (1) svn co svn://www.oksvn.com/shufa_weike
+            (2) 进入 chatDemo 服务器源码根目录
+            (3) pm2 start bin/www 即启动服务器，可通过 pm2 list 查看程序运行状态，pm2 log可查看程序运行日志
+        3. 服务器代码框架简介
+            (1) 服务器框架 使用express搭建（nodejs 最成熟框架）。 bin/www 项目启动文件，端口配置，socket入口。dba 文件夹
+        数据库管理接口，routes 文件夹为主要逻辑中心，logic.js socket 路由层，handle.js 处理层。

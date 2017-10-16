@@ -1,0 +1,7 @@
+{
+  "domain": "http://kydoo.honrystar.com",
+  "userInfo": "/wechatUser/getUser.shtml",
+  "courseInfo": "/weikeCourse/getById.shtml",
+  "courseMaterial": "/weikeCourseMaterial/getListByRoomId.shtml",
+  "reward": "/weikeCourseReward/save.shtml"
+}
