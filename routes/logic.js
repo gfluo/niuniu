@@ -9,6 +9,7 @@
 var url = require('url');
 var handle = require("./handle");
 var queryString = require('querystring');
+const schedule = require('node-schedule');
 let sortOut = require('./lib/sortOut');
 
 global.roomList = {};
@@ -32,9 +33,11 @@ function start(ws) {
         } else {
             ///此处可能出现bug
             global.roomList[socket.roomId]['running'] = '1'; ///代表当前房间已经创建，可以进入准备状态
-
-
+            global.roomList[socket.roomId]['readyPeople'] = 0; ///当前房间无人准备
+            global.roomList[socket.roomId]['waitStart'] = false; ///房间是否处于等待发牌倒计时中
+            global.roomList[socket.roomId]['timer'] = 0; ///游戏开始倒计时timer
         }
+        global.roomList[socket.roomId]['sockets'].push(socket);
 
         socket.on('message', function(data) { ///接收用户信息
             try {
@@ -50,107 +53,50 @@ function start(ws) {
                             return console.error(err);
                         doc['socket'] = socket;
                         socket.send(JSON.stringify(sortOut.initData(doc)));
-                        socket.send(JSON.stringify(sortOut.gameRunningData(doc));
+                        socket.send(JSON.stringify(sortOut.gameRunningData(doc)));
+                        broadcast(socket, JSON.stringify(sortOut.playerjoinData(doc)));
                     })
                 } else if ('ping' === data)
                     socket.send('pong');
                 else {
+                    try {
+                        let actionInfo = JSON.parse(data);
+                        switch (actionInfo.act) {
+                            case 'ready':
+                                socket.ready = 'ok';
+                                global.roomList[socket.roomId]['readyPeople'] += 1;
+                                broadcast(socket, JSON.stringify({ act: 'ready', data: socket['user_id'] }));
+                                socket.send(JSON.stringify({ act: 'ready', data: socket['user_id'] }));
+                                if (2 <= global.roomList[socket.roomId]['readyPeople']) {
+                                    broadcast(socket, JSON.stringify({ act: 'forbidLeaveRoom', data: '' }));
+                                    socket.send(JSON.stringify({ act: 'forbidLeaveRoom', data: '' }));
+                                    if (!global.roomList[socket.roomId]['waitStart']) {
+                                        global.roomList[socket.roomId]['waitStart'] = true;
+                                        global.roomList[socket.roomId]['timer'] = 11;
+                                        let now = new Date();
+                                        now.setSeconds(now.getSeconds() + 12);
+                                        schedule.scheduleJob(now, function() {
+                                            let roomId = socket.roomId;
+                                            broadcast({ roomId: roomId }, JSON.stringify(sortOut.startData({ roomId: roomId })));
+                                        });
+                                        let rule = new schedule.RecurrenceRule();
+                                        let times = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+                                        rule.second = times;
+                                        schedule.scheduleJob(rule, function() {
+                                            console.log(new Date());
+                                            broadcast({ roomId: socket.roomId }, JSON.stringify({ act: 'timer', data: global.roomList[socket.roomId]['timer'] }));
+                                            global.roomList[socket.roomId]['timer'] -= 1;
+                                        });
+                                    }
+                                }
+                                break;
+                            default:
+                        }
+                    } catch (e) {
+
+                    }
                     console.log(data);
                 }
-                /*
-                var queryParam = JSON.parse(data);
-                switch (queryParam["method"]) {
-                    case "getCourseInfo": ///获取课程信息
-                        handle.getCourseInfo(queryParam["data"], function(err, data) {
-                            if (err)
-                                return console.error(err);
-                            pushMsg(socket, data, function(err, data) {
-
-                            });
-                        });
-                        break;
-                    case "getCoursePre": ///获取课程预备内容
-                        handle.getCoursePre(queryParam["data"], function(err, data) {
-                            if (err)
-                                return console.error(err);
-                            pushMsg(socket, data, function(err, data) {
-
-                            });
-                        });
-
-                        break;
-                    case "getCourseContent": ///获取课堂内容
-                        handle.getCourseContent(queryParam["data"], function(err, data) {
-                            if (err)
-                                return console.error(err);
-                            pushMsg(socket, data, function(err, data) {
-
-                            });
-                        });
-                        break;
-                    case "getUserUnread": ///获取学生未读内容信息
-                        handle.getUserUnread(queryParam["data"], function(err, data) {
-                            if (err)
-                                return console.error(err);
-                            pushMsg(socket, data, function(err, data) {
-
-                            });
-                        });
-                        break;
-                    case "reward": ///学生打赏
-                        handle.reward(queryParam["data"], function(err, data) {
-                            if (err)
-                                return console.error(err);
-                            broadcastMsg(queryParam['data']['courseId'], data, function(err, data) {
-
-                            });
-                        });
-                        break;
-                    case "postCourseContent": ///提交课堂内容（老师教课，嘉宾点评和学生讨论部分）,
-                        handle.postCourseContent(queryParam["data"], function(err, data) {
-                            if (err)
-                                return console.error(err);
-                            broadcastMsg(queryParam['data']['courseId'], data, function(err, data) {
-
-                            });
-                        });
-                        break;
-                    case "barrage": ///学生发送弹幕
-                        handle.barrage(queryParam["data"], function(err, data) {
-                            if (err)
-                                return console.error(err);
-                            broadcastMsg(queryParam['data']['courseId'], data, function(err, data) {
-
-                            });
-                        });
-                        break;
-                    case "updateUnreadContent": ///更新学生未听课内容
-                        handle.updateUnreadMsg(queryParam["data"], function(err, data) {
-                            if (err)
-                                return console.error(err);
-                            pushMsg(socket, data, function(err, data) {
-
-                            });
-                        });
-                        break;
-                    case "entering": ///提示当前正在输入（讲师调用）
-                        broadcastMsg(queryParam['data']['courseId'], { data: queryParam["data"], type: "entering" }, function(err, data) { ///数据无需处理，直接广播
-
-                        });
-                        break;
-                    case "withdraw": ///退回消息
-                        handle.withdraw(queryParam["data"], function(err, data) {
-                            if (err)
-                                return console.error(err);
-                            broadcastMsg(queryParam['data']['courseId'], data, function(err, data) {
-
-                            });
-                        });
-                        break;
-                    default:
-                        console.warn("unknown method");
-                }
-                */
             } catch (e) {
                 console.error(e);
             }
@@ -165,7 +111,7 @@ function start(ws) {
 let broadcast = function(socket, msg) {
     let roomId = socket.roomId;
     global.roomList[roomId]['sockets'].forEach(function(item) {
-        if (1 === item.readyState)
+        if (1 === item.readyState && socket !== item)
             item.send(msg);
     });
 }

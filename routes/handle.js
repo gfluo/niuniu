@@ -52,6 +52,13 @@ Handle.prototype.init = function(params, callback) {
     */
 }
 
+/*
+ * 开始发牌
+ * @start
+ */
+Handle.prototype.start = function(params, callback) {
+
+}
 
 /*
  * 用户鉴权

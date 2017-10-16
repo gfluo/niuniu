@@ -1,6 +1,7 @@
 'use strict'
 
 function initData(params) {
+    params.socket['user_id'] = params['GetUserInfo']['data']['UserID'];
     let roomId = params.socket['roomId'];
     let is_join = '0';
     console.log(global.roomList[roomId]);
@@ -16,6 +17,7 @@ function initData(params) {
         online: '1',
     };
 
+    params['GetUserInfo']['data']['position'] = user['position'];
     global.roomList[roomId]['userList'].push(user); ///将该用户放进房间用户组
 
     let data = {
@@ -62,9 +64,38 @@ function playerjoinData(params) {
     return {
         act: 'playerjoin',
         data: {
-            
+            user_id: params['GetUserInfo']['data']['UserID'],
+            nickname: params['GetUserInfo']['data']['Nick'],
+            path: params['GetUserInfo']['data']['Headimg'],
+            position: params['GetUserInfo']['data']['position'],
+            sex: '0'
         }
     };
 }
+
+/*
+ * 开始发牌
+ * @startData
+ */
+function startData(params) {
+    let roomId = params.roomId;
+    global.roomList[roomId]['cur_match'] += 1;
+    let userIdS = [];
+    global.roomList[roomId].sockets.forEach(function(item) {
+        if ('ok' === item.ready)
+            userIdS.push(item['user_id']);
+    });
+    return {
+        act: 'start',
+        data: {
+            cur_match: global.roomList[roomId]['cur_match'],
+            user_ids: userIdS,
+            cards: [{ color: '2', value: '5' }, { color: '0', value: '7' }, { color: '1', value: '12' }, { color: '3', value: '7' }]
+        }
+    }
+}
+
 exports.initData = initData;
 exports.gameRunningData = gameRunningData;
+exports.playerjoinData = playerjoinData;
+exports.startData = startData;
