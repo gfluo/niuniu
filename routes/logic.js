@@ -50,7 +50,7 @@ function start(ws) {
                             return console.error(err);
                         doc['socket'] = socket;
                         socket.send(JSON.stringify(sortOut.initData(doc)));
-                        broadcast(socket, JSON.stringify(sortOut.gameRunningData(doc)));
+                        socket.send(JSON.stringify(sortOut.gameRunningData(doc));
                     })
                 } else if ('ping' === data)
                     socket.send('pong');

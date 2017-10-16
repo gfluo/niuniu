@@ -42,7 +42,7 @@ function gameRunningData(params) {
     global.roomList[roomId]['userList'].forEach(function(item) {
         let info = [];
         info[0] = item['user_id'];
-        info[1] = item['position'];
+        info[1] = item['online'];
         info[2] = item['value'];
         users.push(info);
     });
@@ -57,5 +57,14 @@ function gameRunningData(params) {
 
 }
 
+function playerjoinData(params) {
+    let roomId = params.socket.roomId;
+    return {
+        act: 'playerjoin',
+        data: {
+            
+        }
+    };
+}
 exports.initData = initData;
 exports.gameRunningData = gameRunningData;
