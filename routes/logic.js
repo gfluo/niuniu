@@ -11,6 +11,8 @@ var handle = require("./handle");
 var queryString = require('querystring');
 const schedule = require('node-schedule');
 let sortOut = require('./lib/sortOut');
+let tool = require('./lib/tool');
+let createCards = require('./lib/createCards');
 
 global.roomList = {};
 
@@ -36,6 +38,7 @@ function start(ws) {
             global.roomList[socket.roomId]['readyPeople'] = 0; ///当前房间无人准备
             global.roomList[socket.roomId]['waitStart'] = false; ///房间是否处于等待发牌倒计时中
             global.roomList[socket.roomId]['timer'] = 0; ///游戏开始倒计时timer
+            global.roomList[socket.roomId]['grabZhuangTimer'] = 0; ///抢庄倒计时timer
         }
         global.roomList[socket.roomId]['sockets'].push(socket);
 
@@ -77,25 +80,47 @@ function start(ws) {
                                         now.setSeconds(now.getSeconds() + 12);
                                         schedule.scheduleJob(now, function() {
                                             let roomId = socket.roomId;
-                                            broadcast({ roomId: roomId }, JSON.stringify(sortOut.startData({ roomId: roomId })));
+                                            dealCards(roomId, sortOut.startData({ roomId: roomId }));
                                         });
                                         let rule = new schedule.RecurrenceRule();
-                                        let times = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+                                        let times = tool.createNatureNums(60);
                                         rule.second = times;
-                                        schedule.scheduleJob(rule, function() {
-                                            console.log(new Date());
+                                        let countDown = schedule.scheduleJob(rule, function() {
+                                            if (1 === global.roomList[socket.roomId]['timer']){
+                                                countDown.cancel();
+                                
+                                                global.roomList[socket.roomId]['grabZhuangTimer'] = 4;
+                                                let grabZhuangTimer = new schedule.RecurrenceRule();        ///抢庄倒计时timer
+                                                let newTimes =  tool.createNatureNums(60);
+                                                grabZhuangTimer.second = newTimes;
+                                                let newCountDown = schedule.scheduledJob(rule, function() {
+                                                    console.log(socket.roomId);
+                                                    if (1 === global.roomList[socket.roomId]['grabZhuangTimer']) {
+                                                        newCountDown.cancel();
+                                                    }
+                                                    broadcast({roomId: socket.roomId}, JSON.stringify({act: 'timer', data: global.roomList[socket.roomId]['grabZhuangTimer']}));
+                                                    global.roomList[socket.roomId]['grabZhuangTimer'] -= 1;
+                                                });
+                                            }
                                             broadcast({ roomId: socket.roomId }, JSON.stringify({ act: 'timer', data: global.roomList[socket.roomId]['timer'] }));
                                             global.roomList[socket.roomId]['timer'] -= 1;
                                         });
                                     }
                                 }
                                 break;
+                            case 'grabZhuang':
+                                if (0 === actionInfo.data.length) {
+                                    broadcast({roomId: socket.roomId}, JSON.stringify({act: 'noGrab', data: [{sex: '0'}]}));
+                                } else {
+                                    socket['zhuangMultiple'] = actionInfo.data;
+                                    broadcast(socket, JSON.stringify({act: 'grabZhuang', data: {user_id: socket['user_id'], zhuang_multiple: actionInfo.data, sex: '1'}}));
+
+                                }
                             default:
                         }
                     } catch (e) {
 
                     }
-                    console.log(data);
                 }
             } catch (e) {
                 console.error(e);
@@ -108,11 +133,21 @@ function start(ws) {
     });
 }
 
-let broadcast = function(socket, msg) {
+let broadcast = function(socket, msg) {     ///广播当前消息
     let roomId = socket.roomId;
     global.roomList[roomId]['sockets'].forEach(function(item) {
         if (1 === item.readyState && socket !== item)
             item.send(msg);
+    });
+}
+
+let dealCards = function(roomId, data) {        ///发牌动作
+    let cardsArray = createCards.createDefaultCards(2, []);
+    global.roomList[roomId]['sockets'].forEach((item, index) => {
+        if (1 === item.readyState) {
+            data.data['cards'] = cardsArray[index];
+            item.send(JSON.stringify(data));
+        }
     });
 }
 

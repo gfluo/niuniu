@@ -3,7 +3,6 @@ let QS = require('querystring');
 let http = require('http');
 
 let httpRequest = function(params, callback) {
-    console.log(params.jsonData);
     let token = new Buffer(params.jsonData).toString('base64');
     let content = '?method=' + params.method + '&jsonData=' + token;
 
@@ -43,4 +42,12 @@ let httpRequest = function(params, callback) {
     req.end();
 }
 
+/*
+* 生成自然数数组
+* @createNatureNums
+*/
+
+let createNatureNums = length => Array.from({length}, (v, k) => k);
+
 exports.httpRequest = httpRequest;
+exports.createNatureNums = createNatureNums;

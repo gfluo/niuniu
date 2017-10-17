@@ -4,7 +4,6 @@ function initData(params) {
     params.socket['user_id'] = params['GetUserInfo']['data']['UserID'];
     let roomId = params.socket['roomId'];
     let is_join = '0';
-    console.log(global.roomList[roomId]);
     if (0 > global.roomList[roomId]['userList'].length)
         is_join = '1';
     let user = { ///初始化当前用户在该房间的信息
@@ -90,7 +89,6 @@ function startData(params) {
         data: {
             cur_match: global.roomList[roomId]['cur_match'],
             user_ids: userIdS,
-            cards: [{ color: '2', value: '5' }, { color: '0', value: '7' }, { color: '1', value: '12' }, { color: '3', value: '7' }]
         }
     }
 }
