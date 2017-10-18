@@ -1,5 +1,7 @@
 'use strict'
 
+const createCards = require('./createCards');
+
 function initData(params) {
     params.socket['user_id'] = params['GetUserInfo']['data']['UserID'];
     let roomId = params.socket['roomId'];
@@ -174,7 +176,7 @@ function showMultiple(params) {
         if (zhuangIndex !== index) {
             let user = {};
             user['user_id'] = item['user_id'];
-            user.multiple = item.choiceMultiple + '';
+            user.multiple = item.choiceMultiple ? item.choiceMultiple + '' : '1';
             choices.push(user);
         }
     });
@@ -201,6 +203,86 @@ function showdown(params) {
     }
 }
 
+/*
+* 摊牌所有未主动摊牌
+* @showdownOver
+*/
+function showdownOver(params) {
+    let {roomId} = params;
+    let allUsers = [];
+    global.roomList[roomId].sockets.forEach((item) => {
+        if ('ok' === item.ready && !item.show) {
+            let user = {};
+            if (!item['turnover']){
+                let newCard = createCards.createOneCard(roomId);
+                item.cards.push(newCard);
+            }
+            user['user_id'] = item['user_id'];
+            user['hand_cards'] = item.cards;
+            code: Math.floor(Math.random() * 14);
+            sex: '1';
+            allUsers.push(user);
+        }
+    });
+
+    return {
+        act: 'showdownOver',
+        data: allUsers,
+    }
+}
+
+/*
+* 金币结算
+* @settlement
+*/
+function settlement (params) {
+    let {roomId} = params;
+    let zhuangIndex = global.roomList[roomId]['zhuang'];
+    let users = [];
+    global.roomList[roomId].sockets.forEach((item, index) => {
+        let user = {};
+        user['user_id'] = item['user_id'];
+        user['total_value'] = '4';
+        if (zhuangIndex === index) {
+            user['get_value'] = '4';
+            user['lost_value'] = '-1'
+        } else {
+            user['value'] = 4;
+        }
+        users.push(user);
+    });
+
+    return {
+        act: 'settlement',
+        data: users,
+    }
+}
+
+/*
+* 一局结束游戏结算
+* @roomGameOver
+*/
+function roomGameOver (params) {
+    let { roomId } = params;
+    let users = [];
+    global.roomList[roomId].userList.forEach((item) => {
+        item.value = '4';
+        users.push(item);
+    });
+
+    return {
+        act: 'roomGameOver',
+        data: {
+            game_id: global.roomList[roomId]['cur_match'],
+            users: users,
+            sum: global.roomList[roomId]['max_matches'] || '12',    ///此处初始化要添加
+            num: '12',  ///同上
+            datetime: '2017-10-17 23:12',
+            room_number: '206140',
+        }
+    }
+}
+
 exports.initData = initData;
 exports.gameRunningData = gameRunningData;
 exports.playerjoinData = playerjoinData;
@@ -208,3 +290,6 @@ exports.startData = startData;
 exports.selectedMaster = selectedMaster;
 exports.showMultiple = showMultiple;
 exports.showdown = showdown;
+exports.showdownOver = showdownOver;
+exports.settlement = settlement;
+exports.roomGameOver = roomGameOver;

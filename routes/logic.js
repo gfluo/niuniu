@@ -85,11 +85,11 @@ function start(ws) {
                                             if (0 === global.roomList[roomId]['timer']) {
                                                 if ('waitStart' === global.roomList[roomId]['waitStatus']) {
                                                     global.roomList[roomId]['waitStatus'] = 'waitGrabZhuang';
-                                                    global.roomList[roomId]['timer'] = 4;
+                                                    global.roomList[roomId]['timer'] = 4; ///倒计时抢庄
                                                     dealCards(roomId, sortOut.startData({ roomId: roomId }));
                                                 } else if ('waitGrabZhuang' === global.roomList[roomId]['waitStatus']) {
                                                     ///此处倒计时抢庄结束
-                                                    global.roomList[roomId]['timer'] = 4; ///重新计时
+                                                    global.roomList[roomId]['timer'] = 4; ///重新计时, 倒计时下注
                                                     global.roomList[roomId]['running'] = '3';
                                                     global.roomList[roomId]['waitStatus'] = 'waitChoice';
                                                     broadcast({ roomId: roomId }, JSON.stringify(sortOut.selectedMaster({ roomId: roomId })));
@@ -101,7 +101,13 @@ function start(ws) {
                                                     ///此处应该仍有广播消息
                                                     broadcast({ roomId: roomId }, JSON.stringify(sortOut.showMultiple({ roomId: roomId })));
                                                 } else {
-                                                    global.roomList[roomId]['running'] = '4';
+                                                    broadcast({ roomId: roomId }, JSON.stringify(sortOut.showdownOver({ roomId: roomId})));
+                                                    global.roomList[roomId]['running'] = '5';   ///进入结算倒计时
+                                                    countDown.cancel();
+                                                    setTimeout(function() {
+                                                        broadcast({roomId: roomId}, JSON.stringify(sortOut.settlement({roomId: roomId})));
+                                                        broadcast({roomId: roomId}, JSON.stringify(sortOut.roomGameOver({roomId: roomId})));
+                                                    }, 1000);
                                                 }
                                             } else {
                                                 broadcast({ roomId: roomId }, JSON.stringify({ act: 'timer', data: global.roomList[roomId]['timer'] }));
@@ -110,10 +116,18 @@ function start(ws) {
                                         });
 
                                         global.roomList[roomId]['running'] = '2';
-                                    } else {
-
                                     }
-                                }
+
+                                    let allReady = true;    ///时候需要立即开始
+                                    for (var i in global.roomList[roomId].sockets) {
+                                        if ('ok' !== global.roomList[roomId].sockets[i].ready) {
+                                            allReady = false;
+                                            break;
+                                        }
+                                    }
+                                    if (allReady) 
+                                        global.roomList[socket.roomId]['timer'] = 0;    
+                                    }
                                 break;
                             case 'grabZhuang':
                                 if (0 === actionInfo.data.length) {
@@ -129,6 +143,7 @@ function start(ws) {
                                 broadcast({ roomId: roomId }, JSON.stringify({ act: 'choiceMultiple', data: { user_id: socket['user_id'], multiple: actionInfo.data, sex: '0' } }));
                                 break;
                             case 'turnover':
+                                socket.turnover = false;
                                 let card = createCards.createOneCard(roomId);
                                 socket.cards.push(card);
                                 socket.send(JSON.stringify(card));
